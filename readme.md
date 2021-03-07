@@ -12,9 +12,9 @@ newest.  You can still use/enhance the other code as you see fit.
 - httpStockAttributesForDay - CRUD for the StockAttributesForDay table
 
 ### MySql Version
-- **Strong** Dependent on MySqlCommon directory, see readme in that project
+- **NOTE** Dependent on MySqlCommon directory, see readme in that project 
 - mySqlStockSymbol.py - CRUD routines for StockSymbol table
-- **NOTE** I moved away from this and was just keeping data in csv files for analysis... quicker
+- **Also Note** I moved away from this and was just keeping data in csv files for analysis... quicker
   than accessing database... may pick this up again but for now it's shelved... look at the 
   description below for more info on the 'latest' stuff
 - Also, I didn't write the code for StockAttributesForDay yet... using the http code to do crud
@@ -38,7 +38,7 @@ newest.  You can still use/enhance the other code as you see fit.
         to do for analysis.  It will output a csv file with the name
         summaryValuations_yyyy-mm-dd_yyyy-mm-dd.csv (the yyyy-mm-dd's are
         the start/end window).  fyi: filename set in stockUtils-getSummaryValuationFileName()</dd>
-  <br/>
+
   <dt><strong>StockClass.py</strong></dt>
     <dd>Class to encapsulate the Stock attributes for a particular symbol.  It 
         relies on data in the CSV files, it doesn't pull from any external
@@ -74,7 +74,7 @@ newest.  You can still use/enhance the other code as you see fit.
           <li><strong>writeDataFrame(...)</strong> helper method, writes the dataframe passed in to the filename
             also passed in.</li>
     </dd>
-  <br/>                  
+
   <dt><strong>stockUtils.py</strong></dt>
     <dd>Common utilities,
       <ul>
@@ -95,11 +95,10 @@ newest.  You can still use/enhance the other code as you see fit.
         <li><strong>getSummaryValuationFileName(...)</strong> Returns the name of the summary valuations file, this is 
                                                               the file created via StockAnalysis</li></ul>
     </dd>
-  <br/>
+
   <dt><strong>stockVars.py</strong></dt>
     <dd>Global variables</dd>
   
-  <br/>
   <dt><strong>YFinanceClass</strong></dt>
     <dd>Creates 'ticker' object.  It uses 'yfinance' to get data from yahoo and has methods to provide
         this data.  Methods are:
@@ -120,11 +119,9 @@ newest.  You can still use/enhance the other code as you see fit.
         </ul>
     </dd>
 
-  <br/>
   <dt><strong>testPython</strong></dt>
     <dd>Just 'test/playground' code, left just for info/play :)</dd>
 
-  <br/>
   <dt><strong>utils</strong></dt>
     <dd>Utility routines (not specific to stocks).  Methods are:
         <ul>
@@ -133,13 +130,11 @@ newest.  You can still use/enhance the other code as you see fit.
         </ul>
     </dd>
     
-  <br/>
   <dt><strong>YFinanceProcessHistory</strong></dt>
     <dd>This program <strong>pulls the yahoo stock information</strong> (historical prices,
         dividends and splits) and writes the data to csv files.  Variable 'fileWithSymbols' represents 
         the name of the file with the tickers to pull.  Note: Most of the work is done in the 
         YFinanceClass routine.</dd>
-  <br/>
 </dl>
 
 
@@ -149,8 +144,7 @@ newest.  You can still use/enhance the other code as you see fit.
     data if you change this.  The <strong>analysis output directory</strong> is also defined in stockVars.py</li>
   <li><strong>Make sure</strong> the directories specified above exist on your machine</li>
   <li><strong>Names of data/output files</strong>: program stockUtils.py gives the programs the names of the data files, both
-    on creation (YFinanceClass) and on reading.  Just change it here and re-pull data (YFinanceProcessHistory) and
-    your ready to do analysis (StockAnalysis)</li>
+    on creation (YFinanceClass) and on reading.  If you want to change it just modify stockUtils.py and re-pull data (YFinanceProcessHistory); you're then ready to do analysis (StockAnalysis)</li>
   <li><strong>Getting data from yahoo</strong>
     <ul>
       <li>Have a file that contains the symbols you want to pull (i.e. All.symbols), the first word in each record
@@ -159,7 +153,7 @@ newest.  You can still use/enhance the other code as you see fit.
       <li>Make sure variable <strong>fileWithSymbols</strong> (in YFinanceProcessHistory.py) has the name of 
           the file you created/updated</li>
       <li>Run <strong>YFinanceProcessHistory.py</strong>, it will pull the data and store the results in the 
-          data directory</li>      
+          stockVars.py-pathToAnalysis directory</li>      
     </ul>    
   </li>
   
@@ -167,22 +161,25 @@ newest.  You can still use/enhance the other code as you see fit.
     <ul>
       <li><strong>Update StockAnalysis.py</strong>
         <ul>
-          <li>Have variable <strong>fileWithSymbols</strong> have a list of the symbols you want to analyze</li>
+          <li>Have variable <strong>fileWithSymbols</strong> point to the file that has a list of 
+              the symbols you want to analyze</li>
           <li>Set variable <strong>useCommonDateWindow</strong> to reflect how you want to treat the window of
               dates for each stock... if your trying to compare end of date valuations then you probably want
               all dates to align, if calculated average compound rate (see below) then they don't have to align</li>
           <li>Set the 'startWindow, endWindow' variables to be the window you want to analyze</li>
         </ul>
       </li>
-    </ul>
-    <li><strong>Run StockAnalysis.py</strong>, afterward look at the output file created, will be in the 
+       <li><strong>Run StockAnalysis.py</strong>, afterward look at the output file created, will be in the 
         stockVars.py-pathToAnalysis directory  (see note below on compound rate)</li>
+    </ul>   
   </li>
 
   <li><strong>Calculating the compound growth rate</strong> good to see the avg annual growth over timespan.
-    <p>The table below shows the columns you need to add to the spreadsheet in question.  I did this
-       to the spreadsheet generated out of the StockAnalysis code, was very valuable... once you have
-       it in one spreadsheet you can just copy/paste formulas into a new one (but u know that)
+    I manually added values to the output generated from the StockAnalysis program.  The description below
+    shows what I did.
+    <p>The table below shows the columns you need to add to the spreadsheet in question.  This was
+       very valuable in my analysis, once you've done this in one spreadsheet just copy/paste
+       the formulas into a new one (but u know that)
        <br/>Note: you could consolidate these cols, but I used four cols to make it easy to see what
       I'm doing</p>
     <table>
