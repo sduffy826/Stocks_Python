@@ -127,7 +127,7 @@ if __name__ == "__main__":
     print("Number of records deleted: {0}".format(numDeleted))
 
   # This is for inserts and updates
-  if 1 == 1:
+  if 1 == 0:
     updateStockSymbolRecord("GOOG","Google")
 
   mySql.cleanup()

@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import random
 import time
+import sys
 
 import StockClass 
 import stockUtils as stockUtils
@@ -32,14 +33,15 @@ def waitABit(theMsg=''):
 # files has a list of ticker symbols in it.
 # fileWithSymbols = ['All.symbols','All_unowned.symbols']
 # fileWithSymbols = ['All_subset.symbols']
-fileWithSymbols = ['one.symbol']
+# fileWithSymbols = ['one.symbol']
+fileWithSymbols = ['All.symbols']
 
 # If var below is true then the start and ending window will be common amounst all
 # the stocks, so if you wanted to use 1/1/1990->1/1/2021 but one of the stocks
 # didn't have history till 1/1/2000 then the window for all stocks will be 1/1/2000
 # forward.  
-useCommonDateWindow = True
-# useCommonDateWindow = False
+# useCommonDateWindow = True
+useCommonDateWindow = False
 
 # Set window for anlysis, NOTE: we'll override if history doesn't exist for it
 startWindow, endWindow = '2013-01-20','2017-01-19' # Obama second term
@@ -48,14 +50,34 @@ startWindow, endWindow = '2009-01-20','2013-01-19' # Obama first term
 startWindow, endWindow = '2017-01-20','2020-02-19' # Trump till covid 3 years 1 month
 startWindow, endWindow = '2009-01-20','2012-02-19' # Obama first term 3 years 1 month
 
-# startWindow, endWindow = '2020-01-20','2021-01-19' # Current Year
-# startWindow, endWindow = '2016-03-01','2021-02-28' # 5 years prior to Covid
-#startWindow, endWindow = '2011-03-01','2021-02-28' # 10 years prior to Covid
-#startWindow, endWindow = '2020-03-16','2021-02-28' # Since covid low to now
-startWindow, endWindow = '2003-12-31','2020-11-20' # Window to compare my results to web
+# run 
+startWindow, endWindow = '2020-01-20','2021-01-19' # Current Year
+# startWindow, endWindow = '2020-03-16','2021-02-11' # Since covid low to now
+# startWindow, endWindow = '2016-03-01','2021-02-11' # 5 years prior to Covid
+# startWindow, endWindow = '2011-03-01','2021-02-11' # 10 years prior to Covid
+
+# startWindow, endWindow = '2003-12-31','2020-11-20' # Window to compare my results to web
+# startWindow, endWindow = '2020-04-09','2021-04-08' # 1 Year
+# startWindow, endWindow = '2016-04-09','2021-04-08' # 5 years
+
+# 10/11/2021 run
+# startWindow, endWindow = '2011-10-12','2021-10-11' # 10 years
+# startWindow, endWindow = '2016-10-12','2021-10-11' # 5 years
+# startWindow, endWindow = '2018-10-12','2021-10-11' # 3 years
+# startWindow, endWindow = '2020-10-12','2021-10-11' # 1 years
+
+# If they passed arguments then use them
+if len(sys.argv) >= 3:
+  startWindow = sys.argv[1]
+  endWindow   = sys.argv[2]
+  print("Using arguments from command line, startWindow: {0} endWindow: {1}".format(startWindow,endWindow))
 
 listOfObjects = {}
 listOfSymbols = []
+
+numDaysOfSMA = 5 # Use -1 if don't want SMA
+print("Simple Moving Average days: {0} (Terminate program (within 10 secs) if don't like value)".format(numDaysOfSMA))
+time.sleep(10)
 
 # build array of all the symbols
 print('Reading symbol file(s)')
@@ -80,7 +102,7 @@ for aSymbol in listOfSymbols:
 recCount = 0
 allData  = pd.DataFrame()
 for aSymbol in listOfSymbols:
-  valuationSample, valuationSummary = listOfObjects[aSymbol].calculateValuation(startWindow, endWindow, 1000, False)
+  valuationSample, valuationSummary = listOfObjects[aSymbol].calculateValuation(startWindow, endWindow, 1000, False, numDaysOfSMA)
   recCount = recCount + 1
   if recCount == 1: # First record processed just sets allData to summary data, otherwise we'd append
     del allData

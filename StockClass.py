@@ -20,13 +20,17 @@ class Stock:
     self.ticker    = tickerSymbol
 
     # Get the dates from the last history pull and update 'self...'
-    sDate, eDate = stockUtils.getLogStartEndDate()
+    sDate, eDate   = stockUtils.getLogStartEndDate()
     self.startDate = utils.getDateFromISOString(sDate)
     self.endDate   = utils.getDateFromISOString(eDate)
     
     self.histStartDate = ''
     self.histEndDate   = ''
-
+    self.SMADays       = -1 # Holds the number of days used in simple moving average calculation
+    
+    # Init dictionary 'tickerInfo' with key/values from yahoo
+    self.initTickerInfo()
+    
     # Init split data
     self.initSplitDataFrame()
     self.initSplitRange()
@@ -50,10 +54,19 @@ class Stock:
   #              SOD and EOD calculations, they could be different if the last date in the window is an
   #              action date.
   # Note: it calculates valuation with and without doing dividend reinvestment
+  # Note 2021-10-12: Added logic to use simple moving average on close date to flatten out the
+  #                  potential spikes that may influence your analysis, if the last arg is
+  #                  passed then it'll be used in the calculation for starting shares and valuation
   # -----------------------------------------------------------------------------------------------
-  def calculateValuation(self, startDate, endDate, initialInvestment, recordForEachDay=False):
+  def calculateValuation(self, startDate, endDate, initialInvestment, recordForEachDay=False, numdaysInSimpleMovingAverage=-1):
     sDate = utils.getDateFromISOString(startDate)
     eDate = utils.getDateFromISOString(endDate)
+
+    useSMA = False
+    if numdaysInSimpleMovingAverage != -1:
+      # Need to calc simple moving average before trimming down to the window we want
+      self.initSimpleMovingAverage(numdaysInSimpleMovingAverage)
+      useSMA = True
 
     # Get history with the 'true' values for each date
     trueHistoryFrame = self.getTrueHistoryDataFrameByRange(sDate,eDate)
@@ -69,7 +82,7 @@ class Stock:
     # The summary record we'll build... we turn this into a dataframe for the return value,
     # as you can see almost all values are set while looping thru the data or at the end
     # it's mainly here so you can see what values are collected
-    summaryRecord = {'Ticker'                          : self.ticker,
+    summaryRecord = {'Ticker'                          : self.ticker,                     
                      'StartDate'                       : '',
                      'InitialInvestment'               : initialInvestment,
                      'SharesPurchased'                 : 0,
@@ -84,14 +97,25 @@ class Stock:
                      'DividendShares'                  : 0,
                      'EOD Value w/Reinvest'            : 0,
                      'EOD Value w/Reinvest Pct Change' : 0.0,
-                     'EOD Shares w/Reinvest'           : 0}
+                     'EOD Shares w/Reinvest'           : 0,
+                     'ShortName'                       : self.getKeyValue('shortName'),
+                     'QuoteType'                       : self.getKeyValue('quoteType')}
 
     sodShares = -1
     for index, row in actionTrueHistoryFrame.iterrows():
       # the 'R' on end of vars is for the reinvested dividend version      
-      closeDivisor = row['Close'] if row['Close'] > 0 else 1
+      closeDivisor    = row['Close'] if row['Close'] > 0 else 1
+      if pd.isna(row['CloseSMA']):  # Check for NaN or null, if so use close value
+        # if self.DEBUGIT:
+        print("Found NAN for close divisor, using Close, ticker: {0} date: {1}".format(self.ticker,str(row['Date'])))
+        closeSMADivisor = closeDivisor
+      else:
+        closeSMADivisor = row['CloseSMA'] if row['CloseSMA'] > 0 else 1
       if sodShares < 0:
-        sodShares                        = initialInvestment / closeDivisor
+        if useSMA:
+          sodShares = initialInvestment / closeSMADivisor
+        else:
+          sodShares = initialInvestment / closeDivisor
         sodSharesR                       = sodShares 
         summaryRecord['StartDate']       = str(row['Date'])
         summaryRecord['SharesPurchased'] = sodShares
@@ -112,8 +136,12 @@ class Stock:
         eodShares  = sodShares
         eodSharesR = sodSharesR + dividendShares
 
-      valuation  = sodShares * row['Close']
-      valuationR = (sodSharesR + dividendShares) * row['Close']        
+      if useSMA:
+        valuation  = sodShares * row['CloseSMA']
+        valuationR = (sodSharesR + dividendShares) * row['CloseSMA']        
+      else:
+        valuation  = sodShares * row['Close']
+        valuationR = (sodSharesR + dividendShares) * row['Close']        
       
       # First show without reinvestment, then with it
       actionTrueHistoryFrame.loc[index,['SOD Shares']]                = sodShares   # Start Of Day shares
@@ -201,6 +229,16 @@ class Stock:
     return self.histStartDate, self.histEndDate
 
   # -----------------------------------------------------------------------------------------------
+  # Get the start/end date of the history data
+  # -----------------------------------------------------------------------------------------------
+  def getKeyValue(self,keyName):
+    if keyName in self.tickerInfo:
+      return self.tickerInfo[keyName]
+    else:
+      return None
+
+
+  # -----------------------------------------------------------------------------------------------
   # Return the split multiplier for a given date
   # -----------------------------------------------------------------------------------------------
   def getMultiplierForDate(self, theDate, index2Grab):
@@ -215,6 +253,12 @@ class Stock:
   # -----------------------------------------------------------------------------------------------
   def getSplitMultiplierForDate(self, theDate):
     return self.getMultiplierForDate(theDate,3)
+
+  # -----------------------------------------------------------------------------------------------
+  # Get the start/end date of the history data
+  # -----------------------------------------------------------------------------------------------
+  def getTickerInfo(self):
+    return self.tickerInfo
 
   # -----------------------------------------------------------------------------------------------
   # Get a copy of the 'trueHistoryDataFrame' for the date range passed in
@@ -302,6 +346,9 @@ class Stock:
     self.trueHistoryDataFrame['AdjustedClose'] = self.trueHistoryDataFrame['AdjustedClose'] * self.trueHistoryDataFrame['SplitMultiplier']
     self.trueHistoryDataFrame['Dividend']      = self.trueHistoryDataFrame['Dividend'] * self.trueHistoryDataFrame['SplitMultiplier']
     
+    # Init simple moving average
+    self.initSimpleMovingAverage()
+ 
     # Example if you wanted to call with a lambda expression, but above is probably quicker :)
     #  self.trueHistoryDataFrame.apply(lambda theRow: (theRow.Open * theRow.SplitMult),axis=1)
     if Stock.DEBUGIT:
@@ -312,6 +359,19 @@ class Stock:
       print(self.trueHistoryDataFrame.head())
       print(self.trueHistoryDataFrame.tail())
  
+    return
+
+  # -----------------------------------------------------------------------------------------------
+  # Initialize the simple moving average, this will be column 'CloseSMA', we'll use that to flatten
+  #   the spikes that could occur and inflate/deflate analysis we're doing.
+  # Note: it'll only recalculate when number of days changed
+  # -----------------------------------------------------------------------------------------------    
+  def initSimpleMovingAverage(self,numDays=gv.movingAverageNumDays):
+    # Calculate the simple moving average for the 'close'... this will help flatten spikes  
+    if numDays != self.SMADays:      
+      self.trueHistoryDataFrame['CloseSMA'] = self.trueHistoryDataFrame.loc[:,'Close'].rolling(window=numDays).mean()
+      self.SMADays = numDays    
+    
     return
 
   # -----------------------------------------------------------------------------------------------
@@ -379,7 +439,15 @@ class Stock:
     aRecord = [lowDate, utils.getDateFromISOString('2999-12-31'), 1, 1]  # last record has split multipliers of 1
     self.listOfSplitRange.append(aRecord)
     return
-  
+
+  # -----------------------------------------------------------------------------------------------
+  # Initialize a dictionary with the ticker info (returned from yahoo's getInfo method)
+  # -----------------------------------------------------------------------------------------------
+  def initTickerInfo(self):    
+    infile          = stockUtils.getInfoFileName(self.ticker)
+    self.tickerInfo = stockUtils.loadDictionary(infile)
+    return
+
   def writeDataFrame(self, dataframe, outputFile):
     dataframe.to_csv(outputFile)
     return
@@ -390,11 +458,13 @@ class Stock:
 if __name__ == "__main__":
   # Get stock object
   theSymbol = 'aapl'
+  theSymbol = 'psx'
+  theSymbol = 'spy'
   stockObj = StockClass.Stock(theSymbol)
   print('Processing symbol: {0}'.format(theSymbol))
   
   # Show split
-  if 1 == 1:
+  if 1 == 0:
     print('Split values below')
     for index, row in stockObj.splitDataFrame.iterrows(): 
       print("Index: {0}  Date: {1}  Split Amount: {2}".format(index, row['Date'], row['Split']))
@@ -448,16 +518,18 @@ if __name__ == "__main__":
     print(historyFrame)
 
   # Calculate valuations
-  if 1 == 0:
-    sd, ed = '2009-01-20','2012-02-19'
-    sd, ed = '2015-09-25','2020-09-30'
+  if 1 == 1:
+    sd, ed = '2011-10-12','2021-10-11'
+    # sd, ed = '2015-09-25','2020-09-30'
     # Returns valuation dataframe and a summary record dataframe, pass in window and initialial investment
     #aaplValu, aaplSumm = stockObj.calculateValuation('1970-01-01', '2022-03-01', 1000)
     #stockObj.writeDataFrame(aaplValu, 'aaplValuationFilteredByDate.csv')
     #stockObj.writeDataFrame(aaplSumm, 'aaplValuationSummaryFilteredByDate.csv')
    
-    aaplValu, aaplSumm = stockObj.calculateValuation(sd, ed, 1000, True)
-    stockObj.writeDataFrame(aaplValu, '{0}Valuation_{1}_{2}.csv'.format(theSymbol,sd,ed))
-    stockObj.writeDataFrame(aaplSumm, '{0}ValuationSummary_{1}_{2}.csv'.format(theSymbol,sd,ed))
+    tickerValu, tickerSumm = stockObj.calculateValuation(sd, ed, 1000, True,5)
+    stockObj.writeDataFrame(tickerValu, '{0}Valuation_{1}_{2}.csv'.format(theSymbol,sd,ed))
+    stockObj.writeDataFrame(tickerSumm, '{0}ValuationSummary_{1}_{2}.csv'.format(theSymbol,sd,ed))
 
   print('\n\n\nDone processing symbol: {0}'.format(theSymbol))
+
+  print('Short name is: {0}'.format(stockObj.getKeyValue('shortName')))

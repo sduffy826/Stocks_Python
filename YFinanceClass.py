@@ -64,6 +64,11 @@ class YahooFinance:
     data    = self.tickerData.splits
     data.to_csv(outFile)
 
+  # Save the information about the stock (the dictionary returned from getInfo)
+  def saveInfo(self):
+    infoFile = stockUtils.getInfoFileName(self.ticker)
+    stockUtils.saveDictionary(self.getInfo(),infoFile)
+
   # Get the historical data and save it to a file
   def saveHist(self):
     today = str(datetime.date.today())[:10]
@@ -94,3 +99,8 @@ if __name__ == "__main__":
     for key, value in dictValue.items():
       print("  key: {0:30s} value: {1}".format(key,value))
   
+  # Save histor
+  if 1 == 0:
+    yFinanceObj.saveHist()
+    print('Symbol: {0} saved'.format(yFinanceObj.ticker))
+    

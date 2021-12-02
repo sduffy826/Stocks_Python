@@ -1,3 +1,4 @@
+import json
 import stockVars as gv
 
 # Append the log dates passed in to the logfile, note we'll only write to log if
@@ -27,6 +28,10 @@ def getHistoryFileName(ticker):
 def getHistoryLogFileName():
   return "{thePath}/historyDataPull.log".format(thePath=gv.pathToData)  
 
+# Return the file that has the ticker info (it's a json format file)
+def getInfoFileName(ticker):
+  return "{thePath}/{ticker}_Info.json".format(thePath=gv.pathToData,ticker=ticker)
+
 # Get the start end dates from the log file, we return the values from the last record
 # on file
 def getLogStartEndDate(showFile=False):
@@ -49,6 +54,17 @@ def getSplitFileName(ticker):
 def getSummaryValuationFileName(startDate, endDate):
   return "{0}/summaryValuations_{1}_{2}.csv".format(gv.pathToAnalysis,startDate,endDate)  
 
+# Return the dictionary stored in the filename passed in
+def loadDictionary(fileName):
+  with open(fileName) as f:
+     return json.loads(f.read())
+  return {}
+# Save the dictionary passed in to the filename (also passed in)
+def saveDictionary(dictionaryVar, outputFile):
+  with open(outputFile, 'w') as f:
+    f.write(json.dumps(dictionaryVar))
+
+
 # ------------------------------------------------------------------------------
 #  T E S T I N G
 # ------------------------------------------------------------------------------
@@ -68,4 +84,11 @@ if __name__ == "__main__":
   startDate, endDate = getLogStartEndDate(True)
   print('startDate: {0} endDate: {1}'.format(startDate,endDate))
 
+  if 1 == 1:
+    # Test save/load dictionary
+    dict2Test = { "key1" : "ValueString", "key2": 123, "key3": startDate}
+    saveDictionary(dict2Test, "deleteMe")
+
+    dictReturned = loadDictionary("deleteMe")
+    print(type(dictReturned),str(dictReturned))
 

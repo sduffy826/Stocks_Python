@@ -1,3 +1,5 @@
+<!--  NOTE NOTE NOTE, to preview this in VSCode hit: ctrl+shift+v  -->
+
 # Stock related routines
 
 This has some code I developed to save stock data and also perform analysis.  I originally
@@ -163,14 +165,26 @@ newest.  You can still use/enhance the other code as you see fit.
         <ul>
           <li>Have variable <strong>fileWithSymbols</strong> point to the file that has a list of 
               the symbols you want to analyze</li>
+          <li>Update variable <strong>numDaysOfSMA</strong> to identify if you want to use a simple moving
+              average for calculations... this will flatten spikes around the start/end window.  If you 
+              don't want to use SMA then set value to -1 (note the value in StockClass is just a default
+              to set the value of closeSMA and won't be used if you pass -1; also... it's just set for efficiency
+              if the value you have here matches the global value value then it won't have to recalculate
+              the sma)</li>
           <li>Set variable <strong>useCommonDateWindow</strong> to reflect how you want to treat the window of
               dates for each stock... if your trying to compare end of date valuations then you probably want
               all dates to align, if calculated average compound rate (see below) then they don't have to align</li>
-          <li>Set the 'startWindow, endWindow' variables to be the window you want to analyze</li>
+          <li>Set the 'startWindow, endWindow' variables to be the window you want to analyze (or pass them, see
+              'runStockAnalysis' below</li>
         </ul>
       </li>
-       <li><strong>Run StockAnalysis.py</strong>, afterward look at the output file created, will be in the 
+      <li>Run <strong>StockAnalysis.py (NOTE read next bullet)</strong>, afterward look at the output file created, will be in the 
         stockVars.py-pathToAnalysis directory  (see note below on compound rate)</li>
+      <li>Alternately you can run <strong>runStockAnalysis.sh</strong> to run multiple iterations of StockAnalysis.py, this is useful
+        when you want to create different windows... i.e. 1, 3, 5 and 10 yr windows; just set the windows
+        you want.
+        When you're done you'll want to concatenate the output files... I created a little shell in the output directory, it just
+        has command 'cat $1 >>merg.csv'.... run it for each output file then open the merg.csv file</li>
     </ul>   
   </li>
 

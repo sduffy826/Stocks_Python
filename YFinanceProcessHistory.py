@@ -17,6 +17,9 @@ def procHistoryAndDividendsToFile(fileOfSymbols):
     print("Processing: {0}".format(aSymbol))
     finObj = yfc.YahooFinance(aSymbol)
     finObj.saveHist()
+
+    # Save the key/value pairs associated with this stock
+    finObj.saveInfo()
       
     delayInSeconds = random.randint(minDelay,maxDelay)
     print("  history delay for: {0} seconds".format(delayInSeconds))
@@ -47,6 +50,7 @@ def readSymbolFile(filename):
 fileWithSymbols = 'All.symbols'
 fileWithSymbols = 'All_unowned.symbols'
 fileWithSymbols = 'All.symbols'
+# fileWithSymbols = 'one.symbol'
 
 # Get the history, dividend and split information and write to files
 if 1 == 1:
