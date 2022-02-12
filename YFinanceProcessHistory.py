@@ -39,7 +39,7 @@ def readSymbolFile(filename):
   with open(filename, "r") as f:
     for aLine in f.readlines():
       if len(aLine.strip()) > 0:
-        symbol = aLine.strip().split(' ')[0] # Just take the first word, it's the ticker symbol
+        symbol = aLine.strip().split()[0] # Just take the first word, it's the ticker symbol
         rtnList.append(symbol)
   return rtnList
 
@@ -50,8 +50,14 @@ def readSymbolFile(filename):
 fileWithSymbols = 'All.symbols'
 fileWithSymbols = 'All_unowned.symbols'
 fileWithSymbols = 'All.symbols'
+fileWithSymbols = 'All_owned.symbols'
 # fileWithSymbols = 'one.symbol'
 
 # Get the history, dividend and split information and write to files
 if 1 == 1:
+  theSymbols = readSymbolFile(fileWithSymbols)
+  for aSym in theSymbols:
+    print("Symbol: {0}".format(aSym))
+
+if 1 == 0:
   procHistoryAndDividendsToFile(fileWithSymbols)
