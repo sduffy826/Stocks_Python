@@ -1,4 +1,5 @@
-*backup
+*backup*
+stockTransactionHistory*
 __pycache*
 data/*
 output/*

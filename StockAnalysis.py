@@ -34,7 +34,7 @@ def waitABit(theMsg=''):
 # fileWithSymbols = ['All.symbols','All_unowned.symbols']
 # fileWithSymbols = ['All_subset.symbols']
 # fileWithSymbols = ['one.symbol']
-fileWithSymbols = ['All.symbols']
+fileWithSymbols = ['All_owned.symbols']
 
 # If var below is true then the start and ending window will be common amounst all
 # the stocks, so if you wanted to use 1/1/1990->1/1/2021 but one of the stocks

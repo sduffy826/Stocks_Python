@@ -104,7 +104,7 @@ class Stock:
     sodShares = -1
     for index, row in actionTrueHistoryFrame.iterrows():
       # the 'R' on end of vars is for the reinvested dividend version      
-      closeDivisor    = row['Close'] if row['Close'] > 0 else 1
+      closeDivisor = row['Close'] if row['Close'] > 0 else 1
       if pd.isna(row['CloseSMA']):  # Check for NaN or null, if so use close value
         # if self.DEBUGIT:
         print("Found NAN for close divisor, using Close, ticker: {0} date: {1}".format(self.ticker,str(row['Date'])))
@@ -182,6 +182,11 @@ class Stock:
     summaryRecord['SOD Shares w/Reinvest'] = actionTrueHistoryFrame.loc[lastPos,['SOD Shares w/Reinvest']].values[0]      
     summaryRecord['EOD Value w/Reinvest']  = actionTrueHistoryFrame.loc[lastPos,['EOD Value w/Reinvest']].values[0]
     
+    # totInvestment = initialInvestment + summaryRecord['DividendAmount w/Reinvest']
+    # The growthPct below is based on initial investment... if you want it based on total investment initialInvestment (div+initial) then
+    # uncomment value above and use it instead of 'initialInvestment'... note this makes Pct lower; I left it based
+    # on initial investment since that's really what I am in for and the dividend is really taken out of the 
+    # stock price.
     growthPct = 100 * (actionTrueHistoryFrame.loc[lastPos,['EOD Value w/Reinvest']].values[0] - initialInvestment) / initialInvestment
     summaryRecord['EOD Value w/Reinvest Pct Change'] = growthPct
     
@@ -194,6 +199,70 @@ class Stock:
     # has just the one record... thought being you can collect all summary records for different stocks and then
     # perform some analysis on them
     return actionTrueHistoryFrame, summaryRecordDataFrame
+
+  # Get dates for cost basis from given date: useful if you have a cost basis but don't know when
+  # you acquired security; this will give you dates possible... within a pct of accuracy
+
+  def getDatesForCostBasis(self, costBasis, sharesOwned, lastDateOwnedSecurity = "", accuracyNeeded = 0.95, reinvestedDividend = True):
+    shares = sharesOwned
+
+    # Calculate what the shares where before dividend reinvestment, formula is (shares*price)/(price+div amt)
+    if (row['Dividend'] and reinvestedDividend == True):
+      shares = (shares * row['Close']) / (row['Close'] + row['Dividend'])
+
+    return
+  
+  
+  # -----------------------------------------------------------------------------------------------
+  # Return the cost basis for the stock (with dividend revinue).  It does this pretending an initial
+  # purchase of $1,000.00, to get the growth per dollar (GPD) just divide that number by 1000.
+  # If you have your current valuation of your stock then divide it by (GPD) to come up with what
+  # your original cost basis is.
+  # -----------------------------------------------------------------------------------------------
+  def getCostBasis(self, startDate, endingDate = "", reinvestDividend = True):   
+
+    sDate = utils.getDateFromISOString(startDate)
+    if endingDate == "":
+      eDate = self.endDate 
+    else:
+      eDate = utils.getDateFromISOString(endingDate)
+
+    trueHistoryFrame = self.getTrueHistoryDataFrameByRange(sDate,eDate)
+    
+    actionTrueHistoryFrame = self.getHistoryActionData(trueHistoryFrame)
+    
+    initialInvestment  = 1000
+    totalInvestment    = initialInvestment
+    totalDivInvestment = 0
+    initialDate        = ""
+    finalDate          = ""
+    finalClose         = 0
+    shares, initialShares = -1, -1
+    for index, row in actionTrueHistoryFrame.iterrows():
+      divNum = row['Close'] if row['Close'] > 0 else 1
+      if shares < 0:  # First time thru loop
+        initialShares = initialInvestment / divNum
+        shares        = initialShares
+        initialDate   = row['Date']
+
+      if (row['Dividend'] > 0.0 and reinvestDividend == True):
+        divInvestment      = shares * row['Dividend']
+        shares             += divInvestment/divNum  
+        totalInvestment    += divInvestment
+        totalDivInvestment += divInvestment
+
+      if row['Split'] > 0.0:
+        shares = shares * row['Split']
+      finalDate  = row['Date']
+      finalClose = row['Close']
+
+    totalValue = shares * finalClose
+    cbRec = {"Ticker": self.ticker, "StartDate": initialDate, "InitialInvestment": initialInvestment,
+             "InitialShares": initialShares, "EndingDate": finalDate, "DividendInvestment": totalDivInvestment,
+             "TotalInvestment": totalInvestment, "EndingShares": shares, "EndingValue":  totalValue}
+    cbRecFrame = pd.DataFrame(cbRec,index=[0])
+
+    return cbRecFrame
 
   # -----------------------------------------------------------------------------------------------
   # Return the filtered multiplier for a given date (remember filtered mutliplier only calcs splits
@@ -210,7 +279,8 @@ class Stock:
     if len(dataframe) > 0:  # Check that there is data
       newDataFrame1 = dataframe.iloc[[0, -1]]  # Get first and last record
       newDataFrame2 = dataframe[(dataframe['Dividend'] > 0.0) | (dataframe['Split'] > 0.0)]
-      rtnDataFrame  = newDataFrame1.append(newDataFrame2)
+      # rtnDataFrame  = newDataFrame1.append(newDataFrame2)  ## Deprecated so had to change to concat
+      rtnDataFrame  = pd.concat([newDataFrame1, newDataFrame2]) 
       rtnDataFrame.sort_values('Date', ascending=True, inplace=True)
       return rtnDataFrame.drop_duplicates() # Remove dupes.. could be if first or last record is div/split
     else:
@@ -236,7 +306,6 @@ class Stock:
       return self.tickerInfo[keyName]
     else:
       return None
-
 
   # -----------------------------------------------------------------------------------------------
   # Return the split multiplier for a given date
@@ -459,7 +528,7 @@ if __name__ == "__main__":
   # Get stock object
   theSymbol = 'aapl'
   theSymbol = 'psx'
-  theSymbol = 'spy'
+  theSymbol = 'msft'
   stockObj = StockClass.Stock(theSymbol)
   print('Processing symbol: {0}'.format(theSymbol))
   
@@ -480,8 +549,8 @@ if __name__ == "__main__":
       print("Index: {0}  Date: {1}  AdjDiv: {2} RealDiv: {3}".format(index, row['Date'], row['AdjustedDividend'], row['DateDividend']))
   
   # Test utility to show splits for a particular date
-  if 1 == 1:
-    theDate = utils.getDateFromISOString('2005-10-14')
+  if 1 == 0:
+    theDate = utils.getDateFromISOString('1993-01-01')
     print('SplitMultiplier for {0}: {1}'.format(str(theDate),stockObj.getSplitMultiplierForDate(theDate)))
     print('FilteredMultiplier for {0}: {1}'.format(str(theDate),stockObj.getFilteredMultiplierForDate(theDate)))
   
@@ -500,6 +569,7 @@ if __name__ == "__main__":
   if 1 == 0:
     sd, ed = '2009-01-20', '2013-01-19'
     sd, ed = '2009-01-20','2012-02-19'
+    sd, ed = '1998-01-01', '1999-06-01'
 
     sDate = utils.getDateFromISOString(sd)
     eDate = utils.getDateFromISOString(ed)
@@ -518,17 +588,31 @@ if __name__ == "__main__":
     print(historyFrame)
 
   # Calculate valuations
-  if 1 == 1:
+  if 1 == 0:
     sd, ed = '2011-10-12','2021-10-11'
+    sd, ed = '1998-01-01', '1999-06-01'
+    sd, ed = '2011-10-18', '2024-02-22'
     # sd, ed = '2015-09-25','2020-09-30'
     # Returns valuation dataframe and a summary record dataframe, pass in window and initialial investment
     #aaplValu, aaplSumm = stockObj.calculateValuation('1970-01-01', '2022-03-01', 1000)
     #stockObj.writeDataFrame(aaplValu, 'aaplValuationFilteredByDate.csv')
     #stockObj.writeDataFrame(aaplSumm, 'aaplValuationSummaryFilteredByDate.csv')
    
-    tickerValu, tickerSumm = stockObj.calculateValuation(sd, ed, 1000, True,5)
+    # Last arg identifies number of days for Simple Moving Average, pass no arg (or -1) if don't want it
+    # tickerValu, tickerSumm = stockObj.calculateValuation(sd, ed, 1000, True,5)
+    tickerValu, tickerSumm = stockObj.calculateValuation(sd, ed, 1000, True)
     stockObj.writeDataFrame(tickerValu, '{0}Valuation_{1}_{2}.csv'.format(theSymbol,sd,ed))
     stockObj.writeDataFrame(tickerSumm, '{0}ValuationSummary_{1}_{2}.csv'.format(theSymbol,sd,ed))
+
+  # Calculate cost basis
+  if 1 == 1:
+    costBasis = stockObj.getCostBasis('1990-06-14')
+    print(costBasis)
+    costBasis = stockObj.getCostBasis('1990-06-14','',False)  # Don't do divident reinvestment calculation
+    print(costBasis)
+    costBasis = stockObj.getCostBasis('1990-06-14', '2011-10-18')
+    print(costBasis)
+    
 
   print('\n\n\nDone processing symbol: {0}'.format(theSymbol))
 

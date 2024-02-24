@@ -51,13 +51,14 @@ fileWithSymbols = 'All.symbols'
 fileWithSymbols = 'All_unowned.symbols'
 fileWithSymbols = 'All.symbols'
 fileWithSymbols = 'All_owned.symbols'
-# fileWithSymbols = 'one.symbol'
+fileWithSymbols = 'one.symbol'
 
-# Get the history, dividend and split information and write to files
-if 1 == 1:
+# Read symbol file and show symbols... just a debug step 
+if 1 == 0:
   theSymbols = readSymbolFile(fileWithSymbols)
   for aSym in theSymbols:
     print("Symbol: {0}".format(aSym))
 
-if 1 == 0:
+# Get the history, dividend and split information and write to files
+if 1 == 1:
   procHistoryAndDividendsToFile(fileWithSymbols)

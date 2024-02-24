@@ -60,15 +60,18 @@ for aSymbol in listOfSymbols:
   # Show the dividend info... rate and also calculate the rate to do a comparison :)
   if 1 == 1: # Show divided info
     theDict = listOfObjects[aSymbol].getTickerInfo()
-    divYield = theDict['dividendYield']
-    try:
-      prevClose = theDict['previousClose']  # currentPrice didn't work
-    except:
-      prevClose = -1
-    try:
-      calcDiv = divYield * prevClose
-    except:
-      calcDiv = 'n/a'
-    
-    print("{0},{1} ,dividendRate: ,{2} ,yield: ,{3} ,prevClose: ,{4} ,calcDivRate: ,{5}".format(shortName, symAndType, theDict['dividendRate'], divYield, prevClose, calcDiv))
+    if 'dividendYield' in theDict:
+      divYield = theDict['dividendYield']
+      try:
+        prevClose = theDict['previousClose']  # currentPrice didn't work
+      except:
+        prevClose = -1
+      try:
+        calcDiv = divYield * prevClose
+      except:
+        calcDiv = 'n/a'
+      
+      print("{0},{1} ,dividendRate: ,{2} ,yield: ,{3} ,prevClose: ,{4} ,calcDivRate: ,{5}".format(shortName, symAndType, theDict['dividendRate'], divYield, prevClose, calcDiv))
+    else:
+      print("{0},{1} does not have dividend info".format(shortName,symAndType))
 

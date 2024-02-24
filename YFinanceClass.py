@@ -8,6 +8,12 @@ import numpy as np
 
 import stockUtils as stockUtils
 
+# -----------------------------------------------------------------------------------------------------------------------------------
+# Change log
+# -----------------------------------------------------------------------------------------------------------------------------------
+# 2024-02-19 yfinance changed the way it returns dates, now they're form yyyy-mm-dd 00:00:00-timzoneDelta (yyyy-mm-dd 00:00:00-05:00)
+#            I changed the .to_csv calls to add date_format='%Y-%m-%d' so that I only get the iso date
+# -----------------------------------------------------------------------------------------------------------------------------------
 class YahooFinance:
 
   DEBUGIT  = False
@@ -58,11 +64,11 @@ class YahooFinance:
   def saveDivSplit(self):
     outFile = stockUtils.getDividendFileName(self.ticker)
     data    = self.tickerData.dividends
-    data.to_csv(outFile)
+    data.to_csv(outFile,date_format='%Y-%m-%d')  
 
     outFile = stockUtils.getSplitFileName(self.ticker)
     data    = self.tickerData.splits
-    data.to_csv(outFile)
+    data.to_csv(outFile,date_format='%Y-%m-%d')
 
   # Save the information about the stock (the dictionary returned from getInfo)
   def saveInfo(self):
@@ -74,9 +80,11 @@ class YahooFinance:
     today = str(datetime.date.today())[:10]
     
     # Get history and turn off the auto_adjust (it would adjust open, high, low, close)
+    # Note leave auto_adjust false.... if true then you don't get the adjusted_close column of data
+    # and the close column is really the adjusted close
     historyDF  = self.tickerData.history(start=YahooFinance.MIN_DATE,end=today,auto_adjust=False)
     outFile    = stockUtils.getHistoryFileName(self.ticker)
-    historyDF.to_csv(outFile)
+    historyDF.to_csv(outFile,date_format='%Y-%m-%d')
     stockUtils.appendLogDates(YahooFinance.MIN_DATE, today, 'Log created on {0}'.format(str(datetime.datetime.now())))
     
 
@@ -100,7 +108,7 @@ if __name__ == "__main__":
       print("  key: {0:30s} value: {1}".format(key,value))
   
   # Save histor
-  if 1 == 0:
+  if 1 == 1:
     yFinanceObj.saveHist()
     print('Symbol: {0} saved'.format(yFinanceObj.ticker))
     
