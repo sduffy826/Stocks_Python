@@ -1,6 +1,11 @@
 import json
 import stockVars as gv
 
+# ---------------------------------------------------------------------------------------
+# 2024-02-28 Added method getCapGainFileName to return filename for storing capital gains 
+#              mainly applicable for mutual funds
+# ---------------------------------------------------------------------------------------
+
 # Append the log dates passed in to the logfile, note we'll only write to log if
 # dates differ
 def appendLogDates(startDate, endDate, restOfRecord=""):
@@ -14,6 +19,10 @@ def appendLogDates(startDate, endDate, restOfRecord=""):
   else:
     if 1 == 0: # Was here during testing, don't need message now :)
       print('Log already has: {0} / {1}'.format(sd,ed))
+
+# Return the filename that has the capital gain info (really applicable for mutual funds)
+def getCapGainFileName(ticker):
+  return "{thePath}/{ticker}_CapGains.csv".format(thePath=gv.pathToData,ticker=ticker)
 
 # Return the filename that has the dividend info
 def getDividendFileName(ticker):

@@ -70,6 +70,11 @@ class YahooFinance:
     data    = self.tickerData.splits
     data.to_csv(outFile,date_format='%Y-%m-%d')
 
+    outFile = stockUtils.getCapGainFileName(self.ticker)
+    data    = self.tickerData.capital_gains
+    data.to_csv(outFile,date_format='%Y-%m-%d')  
+
+
   # Save the information about the stock (the dictionary returned from getInfo)
   def saveInfo(self):
     infoFile = stockUtils.getInfoFileName(self.ticker)
@@ -94,7 +99,7 @@ class YahooFinance:
 if __name__ == "__main__":
 
   # Get stock object
-  yFinanceObj = YahooFinance('aapl')
+  yFinanceObj = YahooFinance('vsmix')
   
   # Show short name
   if 1 == 1:
@@ -107,8 +112,13 @@ if __name__ == "__main__":
     for key, value in dictValue.items():
       print("  key: {0:30s} value: {1}".format(key,value))
   
-  # Save histor
+  # Save history
   if 1 == 1:
     yFinanceObj.saveHist()
     print('Symbol: {0} saved'.format(yFinanceObj.ticker))
     
+  # Save dividends/splits/capital gains
+  if 1 == 1:
+    yFinanceObj.saveDivSplit()
+    print('Symbol: {0} saved div/split/cap gains'.format(yFinanceObj.ticker))
+      

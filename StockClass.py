@@ -14,7 +14,11 @@ import time
 #       below for more info
 class Stock:
 
-  DEBUGIT = False
+  DEBUGIT           = False
+
+  # Mutual funds have capital gains that are treated like dividends... the var below will merge
+  # them into the dividend value... which you almost certainly want
+  MERGECAPITALGAINS = True 
 
   def __init__(self, tickerSymbol):
     self.ticker    = tickerSymbol
@@ -200,26 +204,13 @@ class Stock:
     # perform some analysis on them
     return actionTrueHistoryFrame, summaryRecordDataFrame
 
-  # Get dates for cost basis from given date: useful if you have a cost basis but don't know when
-  # you acquired security; this will give you dates possible... within a pct of accuracy
-
-  def getDatesForCostBasis(self, costBasis, sharesOwned, lastDateOwnedSecurity = "", accuracyNeeded = 0.95, reinvestedDividend = True):
-    shares = sharesOwned
-
-    # Calculate what the shares where before dividend reinvestment, formula is (shares*price)/(price+div amt)
-    if (row['Dividend'] and reinvestedDividend == True):
-      shares = (shares * row['Close']) / (row['Close'] + row['Dividend'])
-
-    return
-  
-  
   # -----------------------------------------------------------------------------------------------
   # Return the cost basis for the stock (with dividend revinue).  It does this pretending an initial
   # purchase of $1,000.00, to get the growth per dollar (GPD) just divide that number by 1000.
   # If you have your current valuation of your stock then divide it by (GPD) to come up with what
   # your original cost basis is.
   # -----------------------------------------------------------------------------------------------
-  def getCostBasis(self, startDate, endingDate = "", reinvestDividend = True):   
+  def getCostBasis(self, startDate, endingDate = "", initialInvestment = 1000, reinvestDividend = True):   
 
     sDate = utils.getDateFromISOString(startDate)
     if endingDate == "":
@@ -231,19 +222,20 @@ class Stock:
     
     actionTrueHistoryFrame = self.getHistoryActionData(trueHistoryFrame)
     
-    initialInvestment  = 1000
     totalInvestment    = initialInvestment
     totalDivInvestment = 0
     initialDate        = ""
+    initialSharePrice  = 0
     finalDate          = ""
     finalClose         = 0
     shares, initialShares = -1, -1
     for index, row in actionTrueHistoryFrame.iterrows():
       divNum = row['Close'] if row['Close'] > 0 else 1
       if shares < 0:  # First time thru loop
-        initialShares = initialInvestment / divNum
-        shares        = initialShares
-        initialDate   = row['Date']
+        initialShares     = initialInvestment / divNum
+        shares            = initialShares
+        initialDate       = row['Date']
+        initialSharePrice = row['Close']
 
       if (row['Dividend'] > 0.0 and reinvestDividend == True):
         divInvestment      = shares * row['Dividend']
@@ -257,12 +249,71 @@ class Stock:
       finalClose = row['Close']
 
     totalValue = shares * finalClose
-    cbRec = {"Ticker": self.ticker, "StartDate": initialDate, "InitialInvestment": initialInvestment,
+    cbRec = {"Ticker": self.ticker, "StartDate": initialDate, "InitialInvestment": initialInvestment, "InitSharePrice": initialSharePrice,
              "InitialShares": initialShares, "EndingDate": finalDate, "DividendInvestment": totalDivInvestment,
-             "TotalInvestment": totalInvestment, "EndingShares": shares, "EndingValue":  totalValue}
+             "TotalInvestment": totalInvestment, "EndingSharePrice": finalClose, "EndingShares": shares, "EndingValue":  totalValue}
     cbRecFrame = pd.DataFrame(cbRec,index=[0])
 
     return cbRecFrame
+
+  # --------------------------------------------------------------------------------------
+  # Get dates for cost basis.  This is useful if you have a cost basis but don't know when
+  # you acquired security; this will give you dates possible... within a pct of accuracy
+  # The args should be obvious :)
+  # --------------------------------------------------------------------------------------
+  def getDatesForCostBasis(self, costBasis, sharesOwned, lastDateOwnedSecurity = "", accuracyNeeded = 0.95, reinvestedDividend = True):
+    shares = sharesOwned
+
+    if accuracyNeeded <= 0.0 or accuracyNeeded >= 1.0:
+      raise Exception("accuracy should be number < 1 (i.e. .95 means you want 95% accuracy)")
+    
+    lowBasisRange  = costBasis * accuracyNeeded
+    highBasisRange = costBasis / accuracyNeeded 
+
+    # Get ending date the person has security... if they didn't provide it use last date on file
+    if lastDateOwnedSecurity == "":
+      eDate = self.endDate
+    else:
+      eDate = utils.getDateFromISOString(lastDateOwnedSecurity)
+    
+    # We could use get range with earliest start and eDate but most likely it's the same as below so
+    # we didn't bother... most overhead with this is skipping data till get to eDate... minimal
+    tempData = self.trueHistoryDataFrame.copy()
+    tempData.sort_values('Date', ascending=False, inplace=True)
+
+    dtRec = {"Ticker": self.ticker, "CostBasis": costBasis, "sharesStartedWith": sharesOwned, "OrigPricePerShare" : costBasis/sharesOwned,
+             "endDateOwned": eDate.strftime("%Y-%m-%d"), "accuracyTested": accuracyNeeded, "reinvestedDividend": reinvestedDividend,
+             "Date": "", "Accuracy": 0, "SharesOwned":  0, "PricePerShare": 0, "Valuation": 0}
+
+    numRecs = 0
+    for index, row in tempData.iterrows():
+      if row['Date'] <= eDate:
+        theValue = row['Close'] * shares
+        if theValue >= lowBasisRange and theValue <= highBasisRange:
+          dtRec["Date"] = row["Date"]
+          dtRec["Accuracy"] = theValue/costBasis
+          dtRec["SharesOwned"] = shares
+          dtRec["PricePerShare"] = row["Close"]
+          dtRec["Valuation"] = theValue
+          if numRecs == 0:
+            dtRecFrame = pd.DataFrame(dtRec,index=[0])
+          else:
+            dtRecFrame = pd.concat([dtRecFrame, pd.DataFrame([dtRec])], ignore_index=False)
+          numRecs = numRecs + 1
+                
+        # Calculate what the shares where before dividend reinvestment, formula is (shares*price)/(price+div amt)
+        # we only adjust shares if doing dividend reinvestment and the record date is <= date we had stock
+        if (row['Dividend'] > 0.0 and reinvestedDividend == True):
+          shares = (shares * row['Close']) / (row['Close'] + row['Dividend'])
+
+        # Calculate shares before split
+        if row['Split'] > 0:
+          shares = shares/row['Split']
+
+    if numRecs == 0:
+      dtRecFrame = pd.DataFrame(dtRec,index=[0])
+
+    return dtRecFrame
 
   # -----------------------------------------------------------------------------------------------
   # Return the filtered multiplier for a given date (remember filtered mutliplier only calcs splits
@@ -343,15 +394,61 @@ class Stock:
     multiplier = self.getSplitMultiplierForDate(theDate)
     return multiplier * adjustedDividend 
 
+  # -------------------------------------------------------------------------------------------------
+  # Return dictionary for dividends or capital gain values, they are read in from the file passed in.
+  # The key is date (iso), value is dividend or cap gain amount (as floating point value)
+  # -------------------------------------------------------------------------------------------------
+  def getDividendsAndCapGainFromFileHelper(self,infile):
+    rtnDict = {}
+    try:
+      with open(infile) as filePtr:
+        for aLine in filePtr:
+          try:
+            (key, value) = aLine.split(',')                 
+            if key in rtnDict:
+              rtnDict[key] = rtnDict[key] + float(value)
+            else:
+              rtnDict[key] = float(value)
+          except:
+            print("Exception on getDividendsAndCapGainFromFile, ignored line: {0}".format(aLine))
+    except Exception as ex:
+      print("Exception {0} trying to read: {1}  file ignored".format(ex,infile))
+    
+    return rtnDict
+
+  # ---------------------------------------------------------------------------------------------------------
+  # Helper to merge the dividends and capital gains, it will return a dataframe with 'Date','Dividends' values
+  # ---------------------------------------------------------------------------------------------------------
+  def initDividendCapGainHelper(self):
+    divDict = self.getDividendsAndCapGainFromFileHelper(stockUtils.getDividendFileName(self.ticker))
+    capDict = self.getDividendsAndCapGainFromFileHelper(stockUtils.getCapGainFileName(self.ticker))
+    
+    # We have the dictionaries... merge values from capDict into divDict
+    for key, value in capDict.items():
+      if key in divDict:
+        divDict[key] = divDict[key] + value
+      else:
+        divDict[key] = value
+    
+    rtnFrame = pd.DataFrame(divDict.items(),columns=['Date','Dividends'])
+    rtnFrame.sort_values('Date', ascending=True, inplace=True)
+    return rtnFrame
+  
   # -----------------------------------------------------------------------------------------------
   # Initialize following:
   #    self.dividendDataFrame - dataframe has 'Date'     - Date of split, it's a dtype of Date
   #                                           'Dividend' - The dividend amount
   # -----------------------------------------------------------------------------------------------
   def initDividendDataFrame(self):    
-    infile                 = stockUtils.getDividendFileName(self.ticker)
-    self.dividendDataFrame = pd.read_csv(infile)    
+    if Stock.MERGECAPITALGAINS == True:
+      self.dividendDataFrame = self.initDividendCapGainHelper()
+    else:
+      infile                 = stockUtils.getDividendFileName(self.ticker)
+      self.dividendDataFrame = pd.read_csv(infile)    
 
+    print('-------------------------------------------')
+    print(self.dividendDataFrame)    
+    print('-------------------------------------------')
     if len(self.dividendDataFrame) > 0:     
       # Make the ISODate string a date
       self.dividendDataFrame['Date'] = self.dividendDataFrame['Date'].apply(utils.getDateFromISOString)
@@ -388,9 +485,10 @@ class Stock:
     self.historyDataFrame['Date'] = self.historyDataFrame['Date'].apply(utils.getDateFromISOString)
 
     # Rename column
-    self.historyDataFrame.rename(columns = {'Adj Close'    : 'AdjustedClose', 
-                                            'Dividends'    : 'AdjustedDividend',
-                                            'Stock Splits' : 'Split'}, inplace=True) 
+    self.historyDataFrame.rename(columns = {'Adj Close'     : 'AdjustedClose', 
+                                            'Dividends'     : 'AdjustedDividend',
+                                            'Stock Splits'  : 'Split',
+                                            'Capital Gains' : 'CapitalGains'}, inplace=True) 
         
     # Sort ascending by date
     self.historyDataFrame.sort_values('Date', ascending=True, inplace=True)
@@ -528,7 +626,7 @@ if __name__ == "__main__":
   # Get stock object
   theSymbol = 'aapl'
   theSymbol = 'psx'
-  theSymbol = 'msft'
+  theSymbol = 'vsmix'
   stockObj = StockClass.Stock(theSymbol)
   print('Processing symbol: {0}'.format(theSymbol))
   
@@ -543,7 +641,7 @@ if __name__ == "__main__":
       print(str(aRow))
  
   # Show dividends
-  if 1 == 0:
+  if 1 == 1:
     print('Dividend values below')
     for index, row in stockObj.dividendDataFrame.iterrows(): 
       print("Index: {0}  Date: {1}  AdjDiv: {2} RealDiv: {3}".format(index, row['Date'], row['AdjustedDividend'], row['DateDividend']))
@@ -570,6 +668,7 @@ if __name__ == "__main__":
     sd, ed = '2009-01-20', '2013-01-19'
     sd, ed = '2009-01-20','2012-02-19'
     sd, ed = '1998-01-01', '1999-06-01'
+    sd, ed = '1990-01-01', '2024-02-26'
 
     sDate = utils.getDateFromISOString(sd)
     eDate = utils.getDateFromISOString(ed)
@@ -588,31 +687,37 @@ if __name__ == "__main__":
     print(historyFrame)
 
   # Calculate valuations
-  if 1 == 0:
+  if 1 == 1:
     sd, ed = '2011-10-12','2021-10-11'
     sd, ed = '1998-01-01', '1999-06-01'
-    sd, ed = '2011-10-18', '2024-02-22'
+    sd, ed = '2011-10-18', '2022-10-05'
     # sd, ed = '2015-09-25','2020-09-30'
-    # Returns valuation dataframe and a summary record dataframe, pass in window and initialial investment
-    #aaplValu, aaplSumm = stockObj.calculateValuation('1970-01-01', '2022-03-01', 1000)
-    #stockObj.writeDataFrame(aaplValu, 'aaplValuationFilteredByDate.csv')
-    #stockObj.writeDataFrame(aaplSumm, 'aaplValuationSummaryFilteredByDate.csv')
-   
-    # Last arg identifies number of days for Simple Moving Average, pass no arg (or -1) if don't want it
-    # tickerValu, tickerSumm = stockObj.calculateValuation(sd, ed, 1000, True,5)
-    tickerValu, tickerSumm = stockObj.calculateValuation(sd, ed, 1000, True)
+    # Returns valuation dataframe and a summary record dataframe.
+    #   Args: pass in window (startDate, endDate) , initialInvestmentAmount, boolTrueForDividendReinvestment, #DaysForSimpleMovingAverage (-1 if don't want)    
+    
+    tickerValu, tickerSumm = stockObj.calculateValuation(sd, ed, 5636.07, True, -1)
     stockObj.writeDataFrame(tickerValu, '{0}Valuation_{1}_{2}.csv'.format(theSymbol,sd,ed))
     stockObj.writeDataFrame(tickerSumm, '{0}ValuationSummary_{1}_{2}.csv'.format(theSymbol,sd,ed))
 
   # Calculate cost basis
   if 1 == 1:
-    costBasis = stockObj.getCostBasis('1990-06-14')
+    theDate = '1990-06-14'
+    theDate = '2011-10-18'
+    initInvestment = 5636.07
+    costBasis = stockObj.getCostBasis(theDate)
     print(costBasis)
-    costBasis = stockObj.getCostBasis('1990-06-14','',False)  # Don't do divident reinvestment calculation
+    costBasis = stockObj.getCostBasis(theDate,'',False)  # Don't do divident reinvestment calculation
     print(costBasis)
-    costBasis = stockObj.getCostBasis('1990-06-14', '2011-10-18')
+    costBasis = stockObj.getCostBasis(theDate, '2022-10-05', initInvestment)
     print(costBasis)
     
+    desc = 'To get cost basis, if initialInvestment = 1k, for your amount: costBasis = (yourAmount*1000)/EndingValue (from cost basis calc)'
+    print(desc)
+    
+  # Get the date for a cost basis
+  if 1 == 1:    
+    dateOfBasis = stockObj.getDatesForCostBasis(61899.78, 190.256, "", 0.99, True) # ,accuracyNeeded = 0.95, reinvestedDividend = True)
+    print(dateOfBasis)
 
   print('\n\n\nDone processing symbol: {0}'.format(theSymbol))
 
