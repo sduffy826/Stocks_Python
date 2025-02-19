@@ -14,8 +14,9 @@ def readSymbolFile(filename):
   with open(filename, "r") as f:
     for aLine in f.readlines():
       if len(aLine.strip()) > 0:
-        symbol = aLine.strip().split(' ')[0] # Just take the first word, it's the ticker symbol
-        rtnList.append(symbol)
+        symbol = aLine.strip().split()[0] # Just take the first word, it's the ticker symbol
+        if symbol != "#": 
+          rtnList.append(symbol)
   return rtnList
 
 # Delay for a bit
@@ -34,6 +35,7 @@ def waitABit(theMsg=''):
 # fileWithSymbols = ['All.symbols','All_unowned.symbols']
 # fileWithSymbols = ['All_subset.symbols']
 # fileWithSymbols = ['one.symbol']
+fileWithSymbols = ['All_subset.symbols']
 fileWithSymbols = ['All_owned.symbols']
 
 # If var below is true then the start and ending window will be common amounst all
@@ -102,16 +104,18 @@ for aSymbol in listOfSymbols:
 recCount = 0
 allData  = pd.DataFrame()
 for aSymbol in listOfSymbols:
+  # Args: window, initialInvestment, boolForRecordForEachDay, numDaysOfSimpleMovingAverage
   valuationSample, valuationSummary = listOfObjects[aSymbol].calculateValuation(startWindow, endWindow, 1000, False, numDaysOfSMA)
   recCount = recCount + 1
   if recCount == 1: # First record processed just sets allData to summary data, otherwise we'd append
     del allData
     allData = valuationSummary.copy()
   else:
-    allData = allData.append(valuationSummary)
+    allData = pd.concat([allData, valuationSummary], ignore_index=True)
   del valuationSummary
   del valuationSample
-  waitABit('Created object for: {0}'.format(aSymbol))
+  # Not sure why here so I removed 2024-03-09
+  # waitABit('Created object for: {0}'.format(aSymbol))
 
 if recCount > 0:  
   allData.to_csv(stockUtils.getSummaryValuationFileName(startWindow,endWindow))

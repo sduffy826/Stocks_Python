@@ -1,5 +1,6 @@
 import json
 import stockVars as gv
+import os
 
 # ---------------------------------------------------------------------------------------
 # 2024-02-28 Added method getCapGainFileName to return filename for storing capital gains 
@@ -19,6 +20,26 @@ def appendLogDates(startDate, endDate, restOfRecord=""):
   else:
     if 1 == 0: # Was here during testing, don't need message now :)
       print('Log already has: {0} / {1}'.format(sd,ed))
+
+# Check that all the 'Ticker' values in the dataframe passsed in have
+# data, we return a list of all the tickers that do not (no dupes in that
+# list).
+def checkHasData(dataframe, deleteIfNoTicker = False, verbose=True):
+  nodata = []
+  for index, row in dataframe.iterrows():
+    ticker = row['Ticker'].strip()
+    if hasData(ticker) == False: # and ticker != '?':
+      if verbose:
+        print("Don't have data for: {0}".format(ticker))
+      if ticker not in nodata:
+        nodata.append(ticker)
+      if deleteIfNoTicker:
+        dataframe.loc[index,'Ticker'] = 'deleteME'
+  # If want invalid data removed then remove it now
+  if deleteIfNoTicker and len(nodata) > 0:
+    dataframe.drop(dataframe.index[dataframe['Ticker'] == 'deleteME'], inplace=True)
+  
+  return nodata
 
 # Return the filename that has the capital gain info (really applicable for mutual funds)
 def getCapGainFileName(ticker):
@@ -63,11 +84,21 @@ def getSplitFileName(ticker):
 def getSummaryValuationFileName(startDate, endDate):
   return "{0}/summaryValuations_{1}_{2}.csv".format(gv.pathToAnalysis,startDate,endDate)  
 
+# Return filename for valuation given a filePrefix and a date (they're part of filename)
+def getValuationFileName(filePrefix,theDate):
+  return "{0}/{1}_summaryValuations_{2}.csv".format(gv.pathToAnalysis,filePrefix,theDate)  
+
+# Return True if we have history data for the symbol passed in.
+def hasData(symbol):
+  return os.path.exists(getHistoryFileName(symbol))
+
 # Return the dictionary stored in the filename passed in
 def loadDictionary(fileName):
   with open(fileName) as f:
-     return json.loads(f.read())
+    return json.loads(f.read())
+ 
   return {}
+
 # Save the dictionary passed in to the filename (also passed in)
 def saveDictionary(dictionaryVar, outputFile):
   with open(outputFile, 'w') as f:
@@ -93,8 +124,8 @@ if __name__ == "__main__":
   startDate, endDate = getLogStartEndDate(True)
   print('startDate: {0} endDate: {1}'.format(startDate,endDate))
 
-  if 1 == 1:
-    # Test save/load dictionary
+  if 1 == 0:
+    # Test save/load dictionary to a file
     dict2Test = { "key1" : "ValueString", "key2": 123, "key3": startDate}
     saveDictionary(dict2Test, "deleteMe")
 

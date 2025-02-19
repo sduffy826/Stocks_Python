@@ -1,6 +1,6 @@
 import datetime
 import yfinance as yf
-from pandas_datareader import data as pdr
+# from pandas_datareader import data as pdr
 # import random
 # import time
 import pandas as pd
@@ -21,7 +21,7 @@ class YahooFinance:
   MIN_DATE = '1970-01-01'
 
   def __init__(self, tickerSymbol):
-    yf.pdr_override()
+    # yf.pdr_override()
 
     self.ticker     = tickerSymbol
     self.tickerData = yf.Ticker(self.ticker)

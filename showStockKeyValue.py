@@ -14,7 +14,8 @@ def readSymbolFile(filename):
     for aLine in f.readlines():
       if len(aLine.strip()) > 0:
         symbol = aLine.strip().split()[0] # Just take the first word, it's the ticker symbol
-        rtnList.append(symbol)
+        if symbol != "#": 
+          rtnList.append(symbol)
   return rtnList
 
 # ------------------------------------------------------------------------------
