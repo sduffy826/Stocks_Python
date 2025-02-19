@@ -39,7 +39,7 @@ newest.  You can still use/enhance the other code as you see fit.
         startWindow, endWindow variables should reflect the window you want
         to do for analysis.  It will output a csv file with the name
         summaryValuations_yyyy-mm-dd_yyyy-mm-dd.csv (the yyyy-mm-dd's are
-        the start/end window).  fyi: filename set in stockUtils-getSummaryValuationFileName()</dd><br/>
+        the start/end window).  fyi: filename set in stockUtils-getSummaryValuationFileName()</dd>
    
   <dt><strong>GenTransactionOrPortfolioAnalysis.py</strong></dt>
     <dd>This is also <strong>very valuable</strong>, the main purpose of this is to generate a 
@@ -50,11 +50,11 @@ newest.  You can still use/enhance the other code as you see fit.
         It can also generate summaryValuation based on a portfolio spreadsheet but that doesn't 
         seem as valuable unless it's and old portfolio file and want to see what current 
         valuation might be.
-        <br/>There's good comments at the top of the program telling you how to use it, read them</dd><br/>
+        <br/>There's good comments at the top of the program telling you how to use it, read them</dd>
 
   <dt><strong>StockAnalysisForDataFrame.py</strong></dt>
     <dd>Really a wrapper/utility, it generates the valuation data for values in a dataframe, this
-        is used by the GenTransactionOrPortfolio program.</dd><br/>
+        is used by the GenTransactionOrPortfolio program.</dd>
 
   <dt><strong>StockClass.py</strong></dt>
     <dd>Class to encapsulate the Stock attributes for a particular symbol.  It 
@@ -111,7 +111,7 @@ newest.  You can still use/enhance the other code as you see fit.
                                             trueHistoryDataFrame, splitDataFrame, listOfSplitRange...</li>
           <li><strong>writeDataFrame(...)</strong> helper method, writes the dataframe passed in to the filename
             also passed in.</li>
-    </dd><br/>
+    </dd>
 
   <dt><strong>stockUtils.py</strong></dt>
     <dd>Common utilities,
@@ -150,10 +150,10 @@ newest.  You can still use/enhance the other code as you see fit.
         <li><strong>saveDictionary(...)</strong> Saves the dictionary passed in to a file (also passed in), the file 
                                                  is written in json format</li>                                                
       </ul>                                                              
-    </dd><br/>
+    </dd>
 
   <dt><strong>stockVars.py</strong></dt>
-    <dd>Global variables</dd><br/>
+    <dd>Global variables</dd>
   
   <dt><strong>YFinanceClass</strong></dt>
     <dd>Creates 'ticker' object.  It uses 'yfinance' to get data from yahoo and has methods to provide
@@ -173,22 +173,22 @@ newest.  You can still use/enhance the other code as you see fit.
                                               get destination name</li>
           <li><strong>saveHist()</strong> Saves the stock historical prices to a data file (uses stockUtils also)</li>
         </ul>
-    </dd><br/>
+    </dd>
 
   <dt><strong>testPython</strong></dt>
-    <dd>Just 'test/playground' code, left just for info/play :)</dd><br/>
+    <dd>Just 'test/playground' code, left just for info/play :)</dd>
 
   <dt><strong>utils</strong></dt>
-    <dd>Various utility routines (not specific to stocks).</dd><br/>
+    <dd>Various utility routines (not specific to stocks).</dd>
 
   <dt><strong>dataframeUtils</strong></dt>
-    <dd>Various dataframe utility routines</dd><br/>
+    <dd>Various dataframe utility routines</dd>
     
   <dt><strong>YFinanceProcessHistory</strong></dt>
     <dd>This program <strong>pulls the yahoo stock information</strong> (historical prices,
         dividends and splits) and writes the data to csv files.  Variable 'fileWithSymbols' represents 
         the name of the file with the tickers to pull.  Note: Most of the work is done in the 
-        YFinanceClass routine.</dd><br/>
+        YFinanceClass routine.</dd>
 </dl>
 
 
