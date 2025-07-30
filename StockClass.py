@@ -820,7 +820,7 @@ if __name__ == "__main__":
       print(historyFrame)
 
   # Calculate valuations for a date range
-  if 1 == 1:
+  if 1 == 0:
     sd, ed = '2011-10-12','2021-10-11'
     sd, ed = '1998-01-01', '1999-06-01'
     sd, ed = '2014-11-30', '2022-10-05'
@@ -836,6 +836,21 @@ if __name__ == "__main__":
 
     stockObj.writeDataFrame(tickerValu, '{0}Valuation_{1}_{2}.csv'.format(theSymbol,sd,ed))
     stockObj.writeDataFrame(tickerSumm, '{0}ValuationSummary_{1}_{2}.csv'.format(theSymbol,sd,ed))
+
+  # Calculate valuations for a date range
+  if 1 == 0:
+    sd, ed = '2020-08-07', '2020-08-31'  # Dividend on start, .205, Split on end date 4 for 1
+    sd, ed = '2020-08-07', '2020-09-01'  # Dividend on start, .205, Split the day before on 8/31 4 for 1
+    smaNumDays = -1 # Typically used 5 but during testing don't want it (-1 signifies that)
+
+    # Returns valuation dataframe and a summary record dataframe.
+    #   Args: pass in window (startDate, endDate) , initialInvestmentAmount, boolForRecordForEachDay, #DaysForSimpleMovingAverage (-1 if don't want)    
+    
+    tickerValu, tickerSumm = stockObj.calculateValuation(sd, ed, 1000.0, True, numdaysInSimpleMovingAverage=smaNumDays) 
+
+    stockObj.writeDataFrame(tickerValu, '{0}Valuation_{1}_{2}.csv'.format(theSymbol,sd,ed))
+    stockObj.writeDataFrame(tickerSumm, '{0}ValuationSummary_{1}_{2}.csv'.format(theSymbol,sd,ed))
+
 
   # Calculate cost basis
   if 1 == 0:
@@ -860,9 +875,10 @@ if __name__ == "__main__":
     dateOfBasis = stockObj.getDatesForCostBasis(costBasis, sharesOwned, dateLastOwned, accuracy, dividendReinvested) # ,accuracyNeeded = 0.95, reinvestedDividend = True)
     print(dateOfBasis)
 
-  if 1 == 0:
+  # Example below gets the unadjusted (actual) closing price of a stock on a given date
+  if 1 == 1:
     theDateStr = '2021-08-24'
-    theDateStr = '1993-06-14'
+    theDateStr = '2015-01-02'
     theCol     = 'Close'
     theDate    = utils.getDateFromISOString(theDateStr)
     

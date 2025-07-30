@@ -36,6 +36,8 @@ def waitABit(theMsg=''):
 # fileWithSymbols = ['All_subset.symbols']
 # fileWithSymbols = ['one.symbol']
 fileWithSymbols = ['All_subset.symbols']
+fileWithSymbols = ['eric.symbols']
+fileWithSymbols = ['All_inherited_ira.symbols']
 fileWithSymbols = ['All_owned.symbols']
 
 # If var below is true then the start and ending window will be common amounst all

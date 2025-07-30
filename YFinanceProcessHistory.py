@@ -48,13 +48,14 @@ def readSymbolFile(filename):
 #   M A I N   L I N E
 # ------------------------------------------------------------------------------
 
-fileWithSymbols = 'All.symbols'
 fileWithSymbols = 'All_unowned.symbols'
-fileWithSymbols = 'All.symbols'
 fileWithSymbols = 'All_owned.symbols'
+fileWithSymbols = 'eric.symbols'
+fileWithSymbols = 'All.symbols'
+fileWithSymbols = 'one.symbol'
 
 # Read symbol file and show symbols... just a debug step 
-if 1 == 0:
+if 1 == 1:
   theSymbols = readSymbolFile(fileWithSymbols)
   for aSym in theSymbols:
     print("Symbol: {0}".format(aSym))
