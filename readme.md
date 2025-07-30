@@ -297,7 +297,7 @@ newest.  You can still use/enhance the other code as you see fit.
   <li>The StockClass.py is worth looking at, there are a lot of test blocks that can be run
       to see splits, dividends, 
   <li>stockObj refers to instance of StockClass i.e.<pre>
-  stockObj = StockClass.Stock('aapl'l)</pre></li>
+  stockObj = StockClass.Stock('aapl')</pre></li>
   <li>dates below are python dates, can get via routines in utils like<pre>
   dateVar = utils.getDateFromISOString('2025-02-13')</pre></li>
 </ul>
